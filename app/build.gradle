@@ -1,8 +1,7 @@
 apply plugin: 'com.android.application'
-
 apply plugin: 'kotlin-android'
-
 apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion 26
@@ -11,24 +10,72 @@ android {
         minSdkVersion 21
         targetSdkVersion 26
         versionCode 1
-        versionName "1.0"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        versionName "1.0.1"
     }
+
+    dataBinding {
+        enabled = true
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    signingConfigs {
+        releaseLivegenic {
+            storeFile file("remmby.keystore")
+            storePassword "remmby"
+            keyAlias "remmby"
+            keyPassword "remmby"
+        }
+    }
+
+    dexOptions {
+        preDexLibraries true
+        javaMaxHeapSize "4g"
+        dexInProcess = true
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a' //select ABIs to build APKs for
+            universalApk true //generate an additional APK that contains all the ABIs
+        }
+    }
+
+    // map for the version code
+    project.ext.versionCodes = ['armeabi': 1, 'armeabi-v7a': 2, 'arm64-v8a': 3, 'mips': 5, 'mips64': 6, 'x86': 8, 'x86_64': 9]
+
+    android.applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def abiName = output.getFilter(com.android.build.OutputFile.ABI)
+            output.versionCodeOverride =
+                    project.ext.versionCodes.get(abiName, 0) * 1000000 + android.defaultConfig.versionCode
+            if (abiName == null) {
+                abiName = "universal"
+            }
+            def defaultVersionCode = defaultConfig.versionCode
+            def defaultVersionName = defaultConfig.versionName
+            def fileName = "Remmby-${variant.name}-${defaultVersionName}(${defaultVersionCode})-${abiName}.apk"
+            outputFileName = fileName
+        }
+    }
 }
 
+ext {
+    supportLibraryVersion = '26.1.0'
+}
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    debugImplementation 'com.amitshekhar.android:debug-db:1.0.1'
     implementation"org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
-    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation "com.android.support:appcompat-v7:$supportLibraryVersion"
+    implementation "com.android.support:design:$supportLibraryVersion"
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
-    implementation 'com.android.support:design:26.1.0'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.1'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+    kapt 'com.android.databinding:compiler:3.0.1'
 }
