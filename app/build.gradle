@@ -12,13 +12,57 @@ android {
         versionCode 1
         versionName "1.0.1"
     }
+
     dataBinding {
         enabled = true
     }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    signingConfigs {
+        releaseLivegenic {
+            storeFile file("remmby.keystore")
+            storePassword "remmby"
+            keyAlias "remmby"
+            keyPassword "remmby"
+        }
+    }
+
+    dexOptions {
+        preDexLibraries true
+        javaMaxHeapSize "4g"
+        dexInProcess = true
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'x86', 'x86_64', 'armeabi-v7a', 'arm64-v8a' //select ABIs to build APKs for
+            universalApk true //generate an additional APK that contains all the ABIs
+        }
+    }
+
+    // map for the version code
+    project.ext.versionCodes = ['armeabi': 1, 'armeabi-v7a': 2, 'arm64-v8a': 3, 'mips': 5, 'mips64': 6, 'x86': 8, 'x86_64': 9]
+
+    android.applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def abiName = output.getFilter(com.android.build.OutputFile.ABI)
+            output.versionCodeOverride =
+                    project.ext.versionCodes.get(abiName, 0) * 1000000 + android.defaultConfig.versionCode
+            if (abiName == null) {
+                abiName = "universal"
+            }
+            def defaultVersionCode = defaultConfig.versionCode
+            def defaultVersionName = defaultConfig.versionName
+            def fileName = "Remmby-${variant.name}-${defaultVersionName}(${defaultVersionCode})-${abiName}.apk"
+            outputFileName = fileName
         }
     }
 }
